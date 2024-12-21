@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, jsonify
 import qrcode
 from qrcode.image.styledpil import StyledPilImage
 from qrcode.image.styles.moduledrawers import RoundedModuleDrawer
@@ -6,6 +6,8 @@ from PIL import Image
 import io
 import base64
 import os
+import uuid
+from datetime import datetime
 from dotenv import load_dotenv
 from bakong_khqr import KHQR
 
@@ -25,7 +27,12 @@ if not BAKONG_TOKEN:
 # Create a new KHQR object
 khqr = KHQR(BAKONG_TOKEN)
 
+def generate_transaction_id():
+    """Generate a unique transaction ID"""
+    return f"TRX{datetime.now().strftime('%Y%m%d')}{uuid.uuid4().hex[:8].upper()}"
+
 def generate_qr_with_logo(qr_data):
+    """Generate QR code with logo"""
     qr = qrcode.QRCode(
         version=1,
         error_correction=qrcode.constants.ERROR_CORRECT_H,
@@ -82,33 +89,112 @@ def generate_qr_with_logo(qr_data):
 
     return qr_image_base64
 
+def generate_payment_data(amount, transaction_id=None):
+    """Generate both QR code and deeplink data"""
+    if transaction_id is None:
+        transaction_id = generate_transaction_id()
+
+    try:
+        # Create QR code data
+        qr_data = khqr.create_qr(
+            bank_account="proeung_chiso@aclb",
+            merchant_city="Phnom Penh",
+            merchant_name="Cloudidator Co., Ltd.",
+            amount=float(amount),
+            currency="KHR",
+            store_label="My Store",
+            phone_number="855967920804",
+            bill_number=transaction_id,
+            terminal_label="POS-01",
+            static=False
+        )
+
+        # Generate deeplink
+        deeplink = khqr.generate_deeplink(
+            qr_data,
+            callback="https://your-domain.com/payment/callback",
+            appIconUrl="https://your-domain.com/static/icon.png",
+            appName="Cloudidator Payment"
+        )
+
+        return {
+            'qr_data': qr_data,
+            'deeplink': deeplink,
+            'transaction_id': transaction_id
+        }
+    except Exception as e:
+        print(f"Error generating payment data: {str(e)}")
+        return None
+
 @app.route('/', methods=['GET', 'POST'])
 def index():
     qr_image = None
     amount = ""
+    deeplink = None
+    transaction_id = None
+    formatted_amount = None
+    error_message = None
+    
     if request.method == 'POST':
-        amount = request.form.get('amount', '')
-        if amount:
-            try:
-                # Create QR code
-                qr_data = khqr.create_qr(
-                    bank_account="proeung_chiso@aclb",
-                    merchant_city="Phnom Penh",
-                    merchant_name="Cloudidator Co., Ltd.",
-                    amount=float(amount),
-                    currency="KHR",
-                    store_label="My Store",
-                    phone_number="855967920804",
-                    bill_number="TRX123456",
-                    terminal_label="POS-01",
-                    static=False
-                )
-                qr_image = generate_qr_with_logo(qr_data)
-            except Exception as e:
-                print(f"Error generating QR code: {str(e)}")
-                qr_image = None
+        try:
+            amount = request.form.get('amount', '')
+            if amount:
+                # Convert to float and validate amount
+                amount_float = float(amount)
+                if amount_float <= 0:
+                    error_message = "Amount must be greater than 0"
+                else:
+                    # Format the amount with comma as thousand separator
+                    formatted_amount = f"{amount_float:,.2f}"
+                    
+                    # Generate both QR and deeplink data
+                    payment_data = generate_payment_data(amount)
+                    if payment_data:
+                        qr_image = generate_qr_with_logo(payment_data['qr_data'])
+                        deeplink = payment_data['deeplink']
+                        transaction_id = payment_data['transaction_id']
+        except ValueError:
+            error_message = "Please enter a valid number"
+        except Exception as e:
+            print(f"Error processing payment: {str(e)}")
+            error_message = "An error occurred while processing your payment"
 
-    return render_template('qr.html', qr_image=qr_image, amount=amount)
+    return render_template(
+        'qr.html', 
+        qr_image=qr_image, 
+        amount=amount,
+        formatted_amount=formatted_amount,
+        deeplink=deeplink,
+        transaction_id=transaction_id,
+        error_message=error_message
+    )
+
+@app.route('/payment/callback', methods=['POST'])
+def payment_callback():
+    """Handle payment callback from Bakong"""
+    try:
+        # Verify the callback signature
+        signature = request.headers.get('X-Signature')
+        if not signature:
+            return jsonify({'status': 'error', 'message': 'Missing signature'}), 400
+
+        # Get the callback data
+        data = request.json
+        transaction_id = data.get('transaction_id')
+        status = data.get('status')
+
+        # TODO: Update your database with the payment status
+        
+        return jsonify({
+            'status': 'success',
+            'message': 'Callback processed successfully'
+        })
+
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
 
 if __name__ == '__main__':
     app.run(debug=True)

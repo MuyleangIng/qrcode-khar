@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QR Code Payment</title>
+    <title>Bakong QR Payment</title>
     <style>
         body {
             margin: 0;
@@ -55,28 +55,46 @@
         }
         .input-container input {
             width: 100%;
-            padding: 0.5rem;
+            padding: 0.75rem;
             font-size: 1rem;
             border: 1px solid #ccc;
             border-radius: 4px;
+            box-sizing: border-box;
+            transition: border-color 0.3s;
+        }
+        .input-container input:focus {
+            outline: none;
+            border-color: #e4424b;
         }
         .input-container button {
+            width: 100%;
             margin-top: 0.5rem;
-            padding: 0.5rem 1rem;
+            padding: 0.75rem 1rem;
             font-size: 1rem;
             background-color: #e4424b;
             color: white;
             border: none;
             border-radius: 4px;
             cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .input-container button:hover {
+            background-color: #d13841;
+        }
+        .payment-options {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.5rem;
+            margin-top: 1rem;
         }
         .qr-container {
             background: white;
             padding: 15px;
             display: inline-block;
-            margin-bottom: 2rem;
             position: relative;
             border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
         }
         .qr-frame {
             position: absolute;
@@ -95,7 +113,6 @@
             image-rendering: pixelated;
             image-rendering: -moz-crisp-edges;
             image-rendering: crisp-edges;
-            -ms-interpolation-mode: nearest-neighbor;
         }
         .merchant-name {
             font-size: 1.2rem;
@@ -105,8 +122,41 @@
         }
         .merchant-id {
             color: #666;
-            margin-bottom: 3rem;
+            margin-bottom: 1rem;
             font-size: 0.9rem;
+        }
+        .amount-display {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #e4424b;
+            margin: 1rem 0;
+        }
+        .deeplink-container {
+            width: 100%;
+            padding: 1rem;
+            background: #f8f8f8;
+            border-radius: 8px;
+            box-sizing: border-box;
+        }
+        .deeplink-button {
+            display: inline-block;
+            width: 100%;
+            padding: 0.75rem 1.5rem;
+            background-color: #4CAF50;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            margin-top: 0.5rem;
+            transition: background-color 0.3s;
+            box-sizing: border-box;
+        }
+        .deeplink-button:hover {
+            background-color: #45a049;
+        }
+        .transaction-id {
+            color: #666;
+            font-size: 0.8rem;
+            margin-top: 0.5rem;
         }
         .khqr-logo {
             position: absolute;
@@ -115,6 +165,25 @@
             color: #e4424b;
             font-size: 0.8rem;
             font-weight: bold;
+            letter-spacing: 1px;
+        }
+        .error-message {
+            color: #e4424b;
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+            padding: 0.5rem;
+            background-color: #ffebee;
+            border-radius: 4px;
+        }
+
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        input[type=number] {
+            -moz-appearance: textfield;
         }
     </style>
 </head>
@@ -122,24 +191,96 @@
     <div class="card">
         <div class="corner-decoration"></div>
         <div class="content">
-            <div class="bank-logo">Cloudinator Bank</div>
-            <div class="tagline">Scan. Pay. Done.</div>
-            <form method="POST">
+            <div class="bank-logo">BAKONG</div>
+            <div class="tagline">Fast, Secure, Simple Payment</div>
+            <form method="POST" onsubmit="return validateForm()">
                 <div class="input-container">
-                    <input type="number" name="amount" placeholder="Enter amount" value="{{ amount }}" required>
-                    <button type="submit">Generate QR Code</button>
+                    <input type="number" 
+                           name="amount" 
+                           id="amount"
+                           placeholder="Enter amount (KHR)" 
+                           value="{{ amount }}" 
+                           min="0.01"
+                           step="0.01"
+                           required>
+                    <button type="submit">Generate Payment</button>
+                    {% if error_message %}
+                        <div class="error-message">{{ error_message }}</div>
+                    {% endif %}
                 </div>
             </form>
             {% if qr_image %}
-            <div class="qr-container">
-                <div class="qr-frame"></div>
-                <img src="data:image/png;base64,{{ qr_image }}" alt="QR Code" class="qr-code">
-            </div>
-            <div class="merchant-name">DevOps Team</div>
-            <div class="merchant-id">id@devb</div>
+                {% if formatted_amount %}
+                <div class="amount-display">{{ formatted_amount }} KHR</div>
+                {% endif %}
+                <div class="payment-options">
+                    <div class="qr-container">
+                        <div class="qr-frame"></div>
+                        <img src="data:image/png;base64,{{ qr_image }}" alt="QR Code" class="qr-code">
+                    </div>
+                    {% if deeplink %}
+                    <div class="deeplink-container">
+                        <!-- <h3>Quick Payment</h3> -->
+                        <!-- <p>Open directly in Bakong app</p> -->
+                        <a href="{{ deeplink }}" class="deeplink-button">
+                            Pay with Bakong
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="merchant-name">Cloudidator Co., Ltd.</div>
+                <!-- <div class="merchant-id">proeung_chiso@aclb</div> -->
+                <!-- {% if transaction_id %}
+                <div class="transaction-id">Transaction ID: {{ transaction_id }}</div>
+                {% endif %} -->
             {% endif %}
-            <div class="khqr-logo">KHQR</div>
+            <!-- <div class="khqr-logo">KHQR</div> -->
         </div>
     </div>
+
+    <script>
+        function validateForm() {
+            var amount = document.getElementById('amount').value;
+            
+            // Check if amount is empty
+            if (!amount) {
+                alert('Please enter an amount');
+                return false;
+            }
+
+            // Convert to float for comparison
+            var amountFloat = parseFloat(amount);
+            
+            // Check if amount is negative or zero
+            if (amountFloat <= 0) {
+                alert('Amount must be greater than 0');
+                return false;
+            }
+
+            return true;
+        }
+
+        // Prevent negative numbers in input
+        document.getElementById('amount').addEventListener('keypress', function(e) {
+            if (e.key === '-' || e.key === '+') {
+                e.preventDefault();
+            }
+        });
+
+        // Clean up the input value
+        document.getElementById('amount').addEventListener('input', function(e) {
+            var value = e.target.value;
+            
+            // Remove any negative signs
+            if (value.includes('-')) {
+                e.target.value = value.replace('-', '');
+            }
+
+            // Remove leading zeros
+            if (value.length > 1 && value[0] === '0' && value[1] !== '.') {
+                e.target.value = parseFloat(value).toString();
+            }
+        });
+    </script>
 </body>
 </html>
