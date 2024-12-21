@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Code Payment</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #f5f5f5;
+        }
+        .card {
+            background: white;
+            padding: 2.5rem 2rem;
+            border-radius: 10px;
+            width: 350px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .corner-decoration {
+            position: absolute;
+            width: 200px;
+            height: 200px;
+            background-color: #e4424b;
+            bottom: -100px;
+            right: -100px;
+            transform: rotate(45deg);
+        }
+        .content {
+            position: relative;
+            z-index: 1;
+            text-align: center;
+        }
+        .bank-logo {
+            color: #e4424b;
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+            letter-spacing: 1px;
+        }
+        .tagline {
+            color: #666;
+            margin-bottom: 1.5rem;
+            font-size: 0.9rem;
+        }
+        .input-container {
+            margin-bottom: 1.5rem;
+        }
+        .input-container input {
+            width: 100%;
+            padding: 0.5rem;
+            font-size: 1rem;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        .input-container button {
+            margin-top: 0.5rem;
+            padding: 0.5rem 1rem;
+            font-size: 1rem;
+            background-color: #e4424b;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .qr-container {
+            background: white;
+            padding: 15px;
+            display: inline-block;
+            margin-bottom: 2rem;
+            position: relative;
+            border-radius: 12px;
+        }
+        .qr-frame {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            border: 1.5px solid #eee;
+            border-radius: 12px;
+            pointer-events: none;
+        }
+        .qr-code {
+            width: 180px;
+            height: 180px;
+            display: block;
+            image-rendering: pixelated;
+            image-rendering: -moz-crisp-edges;
+            image-rendering: crisp-edges;
+            -ms-interpolation-mode: nearest-neighbor;
+        }
+        .merchant-name {
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-bottom: 0.25rem;
+            text-transform: uppercase;
+        }
+        .merchant-id {
+            color: #666;
+            margin-bottom: 3rem;
+            font-size: 0.9rem;
+        }
+        .khqr-logo {
+            position: absolute;
+            bottom: 2rem;
+            left: 2rem;
+            color: #e4424b;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="corner-decoration"></div>
+        <div class="content">
+            <div class="bank-logo">Cloudinator Bank</div>
+            <div class="tagline">Scan. Pay. Done.</div>
+            <form method="POST">
+                <div class="input-container">
+                    <input type="number" name="amount" placeholder="Enter amount" value="{{ amount }}" required>
+                    <button type="submit">Generate QR Code</button>
+                </div>
+            </form>
+            {% if qr_image %}
+            <div class="qr-container">
+                <div class="qr-frame"></div>
+                <img src="data:image/png;base64,{{ qr_image }}" alt="QR Code" class="qr-code">
+            </div>
+            <div class="merchant-name">DevOps Team</div>
+            <div class="merchant-id">id@devb</div>
+            {% endif %}
+            <div class="khqr-logo">KHQR</div>
+        </div>
+    </div>
+</body>
+</html>
