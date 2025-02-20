@@ -108,7 +108,7 @@ def generate_payment_data(amount, transaction_id=None):
             terminal_label="POS-01",
             static=False
         )
-
+        print(f"QR data: {qr_data}")
         # Generate deeplink
         deeplink = khqr.generate_deeplink(
             qr_data,
