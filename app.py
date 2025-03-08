@@ -97,7 +97,7 @@ def generate_payment_data(amount, transaction_id=None):
     try:
         # Create QR code data
         qr_data = khqr.create_qr(
-            bank_account="proeung_chiso@aclb",
+            bank_account="name account of bakong",
             merchant_city="Phnom Penh",
             merchant_name="Cloudidator Co., Ltd.",
             amount=float(amount),
